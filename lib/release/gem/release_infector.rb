@@ -23,6 +23,7 @@ module Release
           add_to_gemspec(&block)
           Bundler.with_clean_env do
             res = `cd #{@root} && bundle`
+            puts res
           end
         end
 

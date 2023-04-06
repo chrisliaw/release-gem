@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'release/gem'
+
+if ARGV.length == 0
+  STDERR.puts "<location of the gem>"
+else
+  root = ARGV.first
+  if File.directory?(root)
+    name = File.basename(root)
+    ri = Release::Gem::ReleaseInfector.new(root, name)
+    ri.infect
+    ri.trigger_release_gem
+  else
+    STDERR.puts "Given path '#{root}' not a directory"
+  end
+end
