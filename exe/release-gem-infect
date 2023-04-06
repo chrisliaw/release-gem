@@ -11,6 +11,8 @@ else
     ri = Release::Gem::ReleaseInfector.new(root, name)
     ri.infect
     ri.trigger_release_gem
+
+    STDOUT.puts " Done. release-gem should be enabled for gem under '#{root}'"
   else
     STDERR.puts "Given path '#{root}' not a directory"
   end
