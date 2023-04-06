@@ -10,7 +10,7 @@ else
     name = File.basename(root)
     ri = Release::Gem::ReleaseInfector.new(root, name)
     ri.infect
-    ri.trigger_release_gem
+    #ri.trigger_release_gem
 
     STDOUT.puts " Done. release-gem should be enabled for gem under '#{root}'"
   else
