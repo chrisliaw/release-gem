@@ -19,7 +19,7 @@ GIT
 PATH
   remote: .
   specs:
-    release-gem (0.1.12)
+    release-gem (0.1.13)
       colorize
       teLogger
       toolrack
@@ -49,7 +49,7 @@ GEM
       rspec-support (~> 3.12.0)
     rspec-support (3.12.0)
     teLogger (0.2.2)
-    toolrack (0.22.0)
+    toolrack (0.22.1)
     tty-color (0.6.0)
     tty-command (0.10.1)
       pastel (~> 0.8)
