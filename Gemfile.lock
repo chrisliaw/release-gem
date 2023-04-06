@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    release-gem (0.1.8)
+    release-gem (0.1.9)
       colorize
       git_cli
       gvcs
