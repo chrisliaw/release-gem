@@ -63,7 +63,9 @@ module Release
                 end
               end
 
+              Gem.logger.debug "About to transfer gem"
               gemdepInst.transfer_gem
+              Gem.logger.debug "GEM transfer!"
 
               block.call(:development_gem_temporary_promoted)
             end
@@ -123,6 +125,8 @@ module Release
 
             if $?
               cp "Gem build successfully at #{Gem.format_dt(Time.now)}"
+
+              register(:version_file_path, verfile)
 
               if block
                 block.call(:gem_build_successfully, @selVersion)

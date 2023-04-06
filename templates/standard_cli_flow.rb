@@ -11,42 +11,44 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
     run_test(:rspec) 
 
     # to allow user to get a view on what's changed
+    # and allow user to ignore or remove file from staging
     vcs_cli_overview_changes
 
-    gem_cli_action do
+    # Reason to put it here is because gem build shall
+    # only consider files already inside git system via
+    # git ls-files command. Anything new that is not yet
+    # check in will not be packup by the gem build process
+    vcs_cli_commit
 
-      # step 2 : check dependency
-      release_dependencies 
+    # step 2 : check dependency
+    gem_cli_release_dependencies 
 
-      vcs_cli_commit_new_files
+    # step 3 : build the gem
+    st, ver = gem_cli_build
 
-      # step 3 : build the gem
-      st, ver = build
+    gem_cli_dependency_restore
 
-      dependency_restore
+    if st
+      # step 4, push the gem to rubygems
+      gem_cli_push(version: ver)
+      gem_cli_install(version: ver)
+    end
 
-      if st
-        # step 4, push the gem to rubygems
-        push(version: ver)
-        install(version: ver)
-      end
+    puts "version : #{ver}"
 
-    end # gem_cli_action
+    @selVer = value(:selected_version)
 
+    vcs_add_to_staging_if_commit_before("Gemfile.lock")
+    vcs_add_to_staging(value(:version_file_path))
 
-    vcs_cli_action do
-      @selVer = value(:selected_version)
+    vcs_commit("Commit after gem version #{@selVer} built")
 
-      # step 6 : commit vcs
-      commit
+    # step 7 : tag the source code
+    vcs_cli_tag( tag: @selVer )      
 
-      # step 7 : tag the source code
-      tag( tag: @selVer )      
+    # step 8 : Push the source code
+    vcs_cli_push
 
-      # step 8 : Push the source code
-      push
-
-    end # vcs_action block
   rescue Release::Gem::Abort => ex
     STDERR.puts "\n -- Aborted by user. Message was : #{ex.message}\n".red
   rescue TTY::Reader::InputInterrupt => ex

@@ -65,7 +65,7 @@ module Release
         remove_dev_gem_from_gemfile
         add_gem_to_gemspec(@gemConfig)
 
-      end
+      end # transfer_gem
 
       def all_dev_gems_has_config?
         not_configured_gem.length == 0   
@@ -76,6 +76,7 @@ module Release
       end
 
       def restore_dev_gem
+        Gem.logger.debug "restore_dev_gem : #{@fileHistory.inspect}"
         @fileHistory.each do |k,v|
           FileUtils.mv(k,"#{k}.prod")
           FileUtils.cp(v,k)
@@ -89,6 +90,9 @@ module Release
         ri.trigger_release_gem(&block)
       end
 
+      #### 
+      # Private section
+      ####
       private
       def remove_dev_gem_from_gemfile
         if has_development_gem?

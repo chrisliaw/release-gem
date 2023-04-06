@@ -66,7 +66,7 @@ module Release
               # block should call vcs for remove, ignore and diff
               res = block.call(:select_files_to_manage, { modified: { files: modFiles, dirs: modDir }, new: { files: newFiles, dirs: newDir }, deleted: { files: delFiles, dirs: delDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
 
-              break if res == :done
+              break if not res.is_a?(GitCli::Delta::VCSItem) and res == :done
 
             end
 
@@ -288,6 +288,30 @@ module Release
 
         def add_to_staging(*files)
           @ws.add_to_staging(*files) 
+        end
+
+        def add_to_staging_if_commit_before(*files)
+
+          stgDir, stgFiles = @ws.staged_files
+          modDir, modFiles = @ws.modified_files
+          #newDir, newFiles = @ws.new_files
+          delDir, delFiles = @ws.deleted_files
+
+          mFiles = modFiles.map { |e| e.path }
+          sFiles = stgFiles.map { |e| e.path }
+          dFiles = delFiles.map { |e| e.path }
+
+          res = []
+          files.each do |f|
+            if (mFiles.include?(f) or dFiles.include?(f)) and not sFiles.include?(f)
+              res << f
+            end
+          end
+
+          if not_empty?(res)
+            @ws.add_to_staging(*res)
+          end
+
         end
 
         def ignore(*files)

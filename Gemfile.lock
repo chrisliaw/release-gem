@@ -1,26 +1,10 @@
-GIT
-  remote: git_cli
-  revision: 5dd22c51ccac714c311c33119dec278a01de2416
-  branch: master
-  specs:
-    git_cli (0.11.3)
-      gvcs
-      ptools (~> 1.4.0)
-      teLogger
-      toolrack
-
-GIT
-  remote: gvcs
-  revision: 698970026596bdff48e475c92387287b5966dd1e
-  branch: master
-  specs:
-    gvcs (0.1.1)
-
 PATH
   remote: .
   specs:
     release-gem (0.1.7)
       colorize
+      git_cli
+      gvcs
       teLogger
       toolrack
       tty-command
@@ -31,6 +15,12 @@ GEM
   specs:
     colorize (0.8.1)
     diff-lcs (1.5.0)
+    git_cli (0.11.3)
+      gvcs
+      ptools (~> 1.4.0)
+      teLogger
+      toolrack
+    gvcs (0.1.1)
     pastel (0.8.0)
       tty-color (~> 0.5)
     ptools (1.4.3)
@@ -68,8 +58,6 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  git_cli!
-  gvcs!
   rake (~> 13.0)
   release-gem!
   rspec (~> 3.0)

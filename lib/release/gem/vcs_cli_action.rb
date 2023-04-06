@@ -54,19 +54,21 @@ module Release
 
                 end
 
-                if sel != :done
+                if sel.is_a?(GitCli::Delta::VCSItem)
 
-                  selOps = @prmt.select pmsg("\n What do you want to do with file '#{sel}'?") do |m|
+                  selOps = @prmt.select pmsg("\n What do you want to do with file '#{sel.path}'?") do |m|
 
-                    m.choice "Diff", :diff 
+                    m.choice "Diff", :diff  if not (sel.is_a?(GitCli::Delta::NewFile) or sel.is_a?(GitCli::Delta::NewDir)) 
                     m.choice "Ignore", :ignore
                     m.choice "Remove from staging", :remove_from_staging if sel.is_a?(GitCli::Delta::StagedFile)
+                    m.choice "Delete", :delete if (sel.is_a?(GitCli::Delta::NewFile) or sel.is_a?(GitCli::Delta::NewDir)) 
                     m.choice "Done", :done
                   end
 
                   case selOps
                   when :diff
-                    puts @inst.diff_file(sel.path)
+                    st, res = @inst.diff_file(sel.path)
+                    puts res
                     STDIN.getc
                   when :ignore
                     confirm = @prmt.yes?(pmsg("\n Add file '#{sel.path}' to gitignore file?"))
@@ -77,6 +79,11 @@ module Release
                     confirm = @prmt.yes?(pmsg("\n Remove file '#{sel.path}' from staging?"))
                     if confirm
                       @inst.remove_from_staging(sel.path)
+                    end
+                  when :delete
+                    skip = @prmt.no?(pmsg("\n Delete the file '#{sel.path}' from file system? NOTE THIS CANNOT BE UNDONE! "))
+                    if not skip
+                      FileUtils.rm(sel.path)
                     end
                   when :done
                   end
@@ -120,7 +127,7 @@ module Release
 
                 @prmt.puts ""
 
-                sel = @prmt.multi_select pmsg("\n Following are new files that could be added to version control : ") do |m|
+                sel = @prmt.multi_select pmsg("\n Following are new files that could be added to version control.\n Don't worry if you found not all changed files are here. There will be another commit session after the build : ") do |m|
 
                   mfiles[:new].each do |k,v|
                     v.each do |vv|
