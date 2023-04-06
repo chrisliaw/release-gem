@@ -59,6 +59,87 @@ Release::Gem.engine(:gem, root: Dir.getwd, ui: STDOUT) do
         end
       end
 
+      ## Check in NEW file first or else the gem build will not pick up by the git ls-files
+      vcs_commit_new_files do |ops, *args|
+
+        case ops
+        when :select_files_to_commit
+          mfiles = args.first
+          pmt.puts "\n Files already added to staging : ".yellow
+          mfiles[:staged].each do |k,v|
+            v.each do |vv|
+              pmt.puts " * #{vv}"
+            end
+          end
+
+          pmt.puts ""
+
+          sel = pmt.multi_select "\n Following are new files that could be added to version control : ".yellow do |m|
+
+            [:modified, :new, :deleted].each do |cat|
+              mfiles[cat].each do |k,v|
+                v.each do |vv|
+                  m.choice vv, vv.path
+                end
+              end
+
+            end
+
+            m.choice "Skip", :skip if mfiles[:counter] == 0
+            m.choice "Done", :done
+            m.choice "Abort", :abort
+          end
+
+          if sel.include?(:abort)
+            raise Release::Gem::Abort, "User aborted"
+          elsif sel.include?(:skip)
+            :skip 
+          else
+            res = :done if sel.include?(:done)
+            s = sel.clone
+            s.delete_if { |e| e == :done }
+            if not_empty?(s)
+              st, cres = add_to_staging(*s) if not_empty?(s)
+              if st
+                pmt.puts "\n Files added successfully".green
+              else
+                pmt.puts "\n Files failed to be added. Message was : #{cres}".red
+              end
+            end
+
+            res
+          end
+
+        when :commit_message
+          msg = ""
+          loop do
+            msg = pmt.ask("\n Commit message : ".yellow, required: true)
+            confirm = pmt.yes?(" Commit message : #{msg}\n Proceed? No to provide a new commit message ".yellow)
+            if confirm
+              break
+            end
+          end
+          msg
+
+        when :staged_elements_of_commit
+          elements = args.first
+          pmt.puts "\n Following files/directories shall be committed in this session : ".yellow
+          elements.each do |k,v|
+            v.each do |vv|
+              pmt.puts " * #{vv}"
+            end
+          end
+
+        when :commit_successful
+          pmt.puts "\n Changes committed".green
+
+        when :commit_failed
+          pmt.puts "\n Changes failed to be committed. Error was : #{args.first}"
+
+        end
+
+      end
+
       # step 3 : build the gem
       st, ver = build do |ops, *args|
         case ops

@@ -329,7 +329,7 @@ module Release
         end
 
         def method_missing(mtd, *args, &block)
-          if not @engine.nil? and @engine.respond_to?(mtd)
+          if not @engine.nil? 
             @engine.send(mtd, *args, &block)
           else
             super

@@ -15,6 +15,8 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
       # step 2 : check dependency
       release_dependencies 
 
+      vcs_commit_new_files
+
       # step 3 : build the gem
       st, ver = build
 

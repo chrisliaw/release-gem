@@ -20,6 +20,105 @@ module Release
           instance_eval(&block) if block
         end
 
+        def commit_new_files(*args, &block)
+          res = @inst.commit_new_files do |ops, *args|
+            
+            preset = false
+            if block
+              res = block.call(ops, *args)
+              if res.nil?
+                preset = true
+              else
+                res
+              end
+            else
+              preset = true
+            end
+
+            if preset
+
+              case ops
+              when :select_files_to_commit
+                mfiles = args.first
+                @prmt.puts pmsg("\n Files already added to staging : ")
+                mfiles[:staged].each do |k,v|
+                  v.each do |vv|
+                    @prmt.puts " * #{vv}"
+                  end
+                end
+
+                @prmt.puts ""
+
+                sel = @prmt.multi_select pmsg("\n Following are new files that could be added to version control : ") do |m|
+
+                  mfiles[:new].each do |k,v|
+                    v.each do |vv|
+                      m.choice vv, vv.path
+                    end
+                  end
+
+                  m.choice "Skip", :skip #if mfiles[:counter] == 0
+                  m.choice "Done", :done
+                  m.choice "Abort", :abort
+                end
+
+                if sel.include?(:abort)
+                  raise Release::Gem::Abort, "User aborted"
+                elsif sel.include?(:skip)
+                  :skip 
+                else
+                  res = :done if sel.include?(:done)
+                  s = sel.clone
+                  s.delete_if { |e| e == :done }
+                  if not_empty?(s)
+                    st, cres = add_to_staging(*s) if not_empty?(s)
+                    if st
+                      @prmt.puts pmsg("\n Files added successfully", :green)
+                    else
+                      @prmt.puts pmsg("\n Files failed to be added. Message was : #{cres}", :red)
+                    end
+                  end
+
+                  res
+
+                end
+
+              when :commit_message
+                msg = ""
+                loop do
+                  msg = @prmt.ask(pmsg("\n Commit message : "), required: true)
+                  confirm = @prmt.yes?(pmsg(" Commit message : #{msg}\n Proceed? No to provide a new commit message "))
+                  if confirm
+                    break
+                  end
+                end
+
+                msg
+
+              when :staged_elements_of_commit
+
+                elements = args.first
+                @prmt.puts pmsg("\n Following new files/directories shall be committed in this session : ")
+                elements.each do |k,v|
+                  v.each do |vv|
+                    @prmt.puts " * #{vv}"
+                  end
+                end
+
+              when :commit_successful
+                @prmt.puts pmsg("\n Changes committed",:green)
+                @prmt.puts args.first
+
+              when :commit_failed
+                @prmt.puts pmsg("\n Changes failed to be committed. Error was : #{args.first}")
+
+              end
+            end
+          end # commit_new_files block
+
+        end # commit_new_files
+
+
         def commit(*args, &block)
           res = @inst.commit do |ops, *args|
             
@@ -60,7 +159,7 @@ module Release
 
                   end
 
-                  m.choice "Skip", :skip if mfiles[:counter] == 0
+                  m.choice "Skip", :skip #if mfiles[:counter] == 0
                   m.choice "Done", :done
                   m.choice "Abort", :abort
                 end

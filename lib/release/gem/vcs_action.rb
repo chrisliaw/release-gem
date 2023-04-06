@@ -42,6 +42,72 @@ module Release
           instance_eval(&block) if block
         end
 
+        # 
+        # Special operation since the gem build will only include files from
+        # git ls-files
+        #
+        def commit_new_files(msg = nil, &block)
+
+          res = :value
+          if block
+
+            loop do
+
+              stgDir, stgFiles = @ws.staged_files
+              newDir, newFiles = @ws.new_files
+
+              if is_empty?(newFiles)
+                res = :skip
+                break
+              end
+
+              newFiles.delete_if { |f| stgFiles.include?(f) }
+              newDir.delete_if { |f| stgDir.include?(f) }
+
+              res = block.call(:select_files_to_commit, { new: { files: newFiles, dirs: newDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
+
+              break if res == :skip or res == :done
+
+            end
+
+            if res == :done
+
+              stgDir, stgFiles = @ws.staged_files
+              block.call(:staged_elements_of_commit, { files: stgFiles, dirs: stgDir })
+
+              msg = block.call(:commit_message) if is_empty?(msg) 
+              raise VcsActionError, "Commit message is empty" if is_empty?(msg)
+
+              cp "Commit with user message : #{msg}"
+              st, res = @ws.commit(msg)
+              if st
+                block.call(:commit_successful, res) if block
+              else
+                block.call(:commit_failed, res) if block
+              end
+              [st, res]
+
+            end
+
+
+          elsif not_empty?(msg)
+
+            newDir, newFiles = @ws.new_files
+            add_to_staging(*newFiles)
+
+            cp "Commit with user message : #{msg}"
+            st, res = @ws.commit(msg)
+            if st
+              block.call(:commit_successful, res) if block
+            else
+              block.call(:commit_failed, res) if block
+            end
+            [st, res]
+
+          end
+
+        end
+
         def commit(msg = nil, &block)
 
           res = :value
@@ -57,6 +123,12 @@ module Release
 
               modFiles.delete_if { |f| stgFiles.include?(f) }
               modDir.delete_if { |f| stgDir.include?(f) }
+              
+              newFiles.delete_if { |f| stgFiles.include?(f) }
+              newDir.delete_if { |f| stgDir.include?(f) }
+
+              delFiles.delete_if { |f| stgFiles.include?(f) }
+              delDir.delete_if { |f| stgDir.include?(f) }
 
               # block should call vcs for add, remove, ignore and other operations
               res = block.call(:select_files_to_commit, { modified: { files: modFiles, dirs: modDir }, new: { files: newFiles, dirs: newDir }, deleted: { files: delFiles, dirs: delDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self, counter: counter } )
