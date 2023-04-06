@@ -38,8 +38,10 @@ module Release
               block.call(:action_start, :relase_dependencies)
 
               gemdepInst.development_gem.each do |k,v|
-                gemdepInst.infect_gem(v, k, &block)
-                block.call(:block_until_dev_gem_done, { name: k, path: v })
+                res = gemdepInst.infect_gem(v, k, &block)
+                if res != :skip
+                  block.call(:block_until_dev_gem_done, { name: k, path: v })
+                end
               end
               
 

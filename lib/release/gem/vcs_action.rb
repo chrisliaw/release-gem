@@ -42,6 +42,40 @@ module Release
           instance_eval(&block) if block
         end
 
+        def overview_changes(&block)
+
+          res = :done
+          if block
+
+            loop do
+
+              stgDir, stgFiles = @ws.staged_files
+              modDir, modFiles = @ws.modified_files
+              newDir, newFiles = @ws.new_files
+              delDir, delFiles = @ws.deleted_files
+
+              modFiles.delete_if { |f| stgFiles.include?(f) }
+              modDir.delete_if { |f| stgDir.include?(f) }
+              
+              newFiles.delete_if { |f| stgFiles.include?(f) }
+              newDir.delete_if { |f| stgDir.include?(f) }
+
+              delFiles.delete_if { |f| stgFiles.include?(f) }
+              delDir.delete_if { |f| stgDir.include?(f) }
+
+              # block should call vcs for remove, ignore and diff
+              res = block.call(:select_files_to_manage, { modified: { files: modFiles, dirs: modDir }, new: { files: newFiles, dirs: newDir }, deleted: { files: delFiles, dirs: delDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
+
+              break if res == :done
+
+            end
+
+          end
+
+          res
+          
+        end
+
         # 
         # Special operation since the gem build will only include files from
         # git ls-files

@@ -61,6 +61,7 @@ module Release
                 v[:options].each do |t|
                   m.choice t, t
                 end
+                m.choice "Skip", :skip
               end
 
             when :new_terminal_launching

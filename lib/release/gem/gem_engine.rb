@@ -53,14 +53,14 @@ module Release
         end
 
         def method_missing(mtd, *args, &block)
-          if mtd.to_s.start_with?("gem_cli")
+          if mtd.to_s.start_with?("gem_cli_")
             Gem.logger.debug "Passing method '#{mtd}' to gem_cli action"
-            pmtd = mtd.to_s[7..-1].to_sym
+            pmtd = mtd.to_s[8..-1].to_sym
             gem_cli_action_inst.send(pmtd, *args, &block)
 
-          elsif mtd.to_s.start_with?("vcs_cli")
+          elsif mtd.to_s.start_with?("vcs_cli_")
             Gem.logger.debug "Passing method '#{mtd}' to vcs_cli action"
-            pmtd = mtd.to_s[7..-1].to_sym
+            pmtd = mtd.to_s[8..-1].to_sym
             vcs_cli_action_inst.send(pmtd, *args, &block)
  
           elsif mtd.to_s.start_with?("gem_")

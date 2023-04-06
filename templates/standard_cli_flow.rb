@@ -11,14 +11,14 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
     run_test(:rspec) 
 
     # to allow user to get a view on what's changed
-    vcs_commit
+    vcs_cli_overview_changes
 
     gem_cli_action do
 
       # step 2 : check dependency
       release_dependencies 
 
-      vcs_commit_new_files
+      vcs_cli_commit_new_files
 
       # step 3 : build the gem
       st, ver = build

@@ -20,6 +20,77 @@ module Release
           instance_eval(&block) if block
         end
 
+        def overview_changes(*args, &block)
+          @inst.overview_changes do |ops, *args|
+            preset = false
+            if block
+              res = block.call(ops, *args)
+              if res.nil?
+                preset = true
+              else
+                res
+              end
+            else
+              preset = true
+            end
+
+            if preset
+              case ops
+              when :select_files_to_manage
+                mfiles = args.first
+
+                sel = @prmt.select pmsg("\n Following are files that could be managed : ") do |m|
+
+                  [:staged, :modified, :new, :deleted].each do |cat|
+                    mfiles[cat].each do |k,v|
+                      v.each do |vv|
+                        m.choice vv, vv
+                      end
+                    end
+
+                  end
+
+                  m.choice "Done", :done
+
+                end
+
+                if sel != :done
+
+                  selOps = @prmt.select pmsg("\n What do you want to do with file '#{sel}'?") do |m|
+
+                    m.choice "Diff", :diff 
+                    m.choice "Ignore", :ignore
+                    m.choice "Remove from staging", :remove_from_staging if sel.is_a?(GitCli::Delta::StagedFile)
+                    m.choice "Done", :done
+                  end
+
+                  case selOps
+                  when :diff
+                    puts @inst.diff_file(sel.path)
+                    STDIN.getc
+                  when :ignore
+                    confirm = @prmt.yes?(pmsg("\n Add file '#{sel.path}' to gitignore file?"))
+                    if confirm
+                      @inst.ignore(sel.path)
+                    end
+                  when :remove_from_staging
+                    confirm = @prmt.yes?(pmsg("\n Remove file '#{sel.path}' from staging?"))
+                    if confirm
+                      @inst.remove_from_staging(sel.path)
+                    end
+                  when :done
+                  end
+
+                end
+
+                sel
+
+              end
+            end
+
+          end
+        end # overview_changes
+
         def commit_new_files(*args, &block)
           res = @inst.commit_new_files do |ops, *args|
             

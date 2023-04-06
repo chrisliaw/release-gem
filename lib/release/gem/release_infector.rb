@@ -38,16 +38,19 @@ module Release
         poss = tu_possible_terminal
         raise ReleaseInfectorError, "No possible terminal found" if is_empty?(poss)
 
+        terminal = ""
         Bundler.with_clean_env do
 
           cmd = "cd #{@root} && rake gem:release" 
-          terminal = ""
           if block
             terminal = block.call(:select_terminal, name: @name, options: poss)
-            terminal = poss.first if is_empty?(terminal)
+            if terminal != :skip
+              terminal = poss.first if is_empty?(terminal)
 
-            block.call(:new_terminal_launching, name: @name, terminal: terminal)
-            tu_new_terminal(terminal, cmd)
+              block.call(:new_terminal_launching, name: @name, terminal: terminal)
+              tu_new_terminal(terminal, cmd)
+            end
+
           else
             terminal = poss.first
             block.call(:new_terminal_launching, name: @name, terminal: terminal)
@@ -57,6 +60,8 @@ module Release
           block.call(:new_terminal_launched, name: @name, terminal: terminal) if block
 
         end
+
+        terminal
 
       end
 
