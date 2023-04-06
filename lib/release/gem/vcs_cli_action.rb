@@ -108,6 +108,7 @@ module Release
 
               when :commit_successful
                 @prmt.puts "\n Changes committed".green
+                @prmt.puts args.first
 
               when :commit_failed
                 @prmt.puts "\n Changes failed to be committed. Error was : #{args.first}"
@@ -142,6 +143,7 @@ module Release
 
               when :tagging_success
                 @prmt.puts "\n Tagging of source code is successful.".green
+                @prmt.puts args.first
 
               when :tagging_failed
                 @prmt.puts "\n Tagging of source code failed. Error was : #{args.first}".red
@@ -204,6 +206,7 @@ module Release
 
               when :push_successful
                 @prmt.puts "\n Push success!".green
+                @prmt.puts args.first
 
               when :push_failed
                 @prmt.puts "\nPush failed. Error was : #{args.first}".red
