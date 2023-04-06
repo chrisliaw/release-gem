@@ -96,10 +96,12 @@ module Release
       private
       def remove_dev_gem_from_gemfile
         if has_development_gem?
+          Gem.logger.debug "remove_dev_gem_from_gemfile has development gem"
           orin = gemfile_file
           dest = "#{gemfile_file}.dev"
           FileUtils.cp(orin, dest)
           @fileHistory[orin] = dest
+          Gem.logger.debug "fileHistory added : #{@fileHistory}"
 
           tmpOut = "#{orin}.tmp"
 

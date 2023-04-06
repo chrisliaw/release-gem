@@ -67,6 +67,11 @@ module Release
               gemdepInst.transfer_gem
               Gem.logger.debug "GEM transfer!"
 
+              Bundler.with_unbundled_env do
+                # since there is a new version after release!
+                `cd #{@root} && bundle update`
+              end
+
               block.call(:development_gem_temporary_promoted)
             end
 
@@ -343,10 +348,10 @@ module Release
         end
 
         def gemdepInst
-          if @gemdepInst.nil?
-            @gemdepInst = GemDep.new(@root)
+          if @_gemdepInst.nil?
+            @_gemdepInst = GemDep.new(@root)
           end
-          @gemdepInst
+          @_gemdepInst
         end
 
 
