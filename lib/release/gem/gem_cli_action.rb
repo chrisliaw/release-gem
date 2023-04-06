@@ -19,8 +19,47 @@ module Release
         end
 
         def release_dependencies
-          puts "CLI release dependencies"
-          @inst.release_dependencies
+          @inst.release_dependencies do |ops, *args|
+            case ops
+            when :action_start
+              @pmt.say "\n Release dependencies starting...\n".yellow
+
+            when :define_gem_prod_config
+
+              config = {}
+              selections = args.first[:gems]
+
+              loop do
+
+                sel = @pmt.select("\n The following development gems requires configuration. Please select one to configure") do |m|
+                  selections.each do |g|
+                    m.choice g, g
+                  end
+                end
+
+                config[sel] = {} if config[sel].nil?
+
+                type = @pmt.select("\n The gem in production will be runtime or development ? ") do |m|
+                  m.choice "Runtime", :runtime
+                  m.choice "Development only", :dev
+                end
+
+                config[sel][:type] = type
+
+                ver = @pmt.ask("\n Is there specific version pattern (including the ~>/>/>=/= of gemspec) for the gem in production? (Not mandatory) : ")
+                config[sel][:version] = ver if not_empty?(ver)
+
+                @pmt.puts " ** Done configure for gem #{sel}"
+                selections.delete_if { |v| v == sel }
+                break if selections.length == 0
+
+              end
+
+              config
+
+            end
+          end
+
         end
 
         def build(*pargs, &block)

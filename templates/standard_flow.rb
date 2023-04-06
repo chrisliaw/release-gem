@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'gem/release'
+require 'release/gem'
 
 require 'tty/prompt'
 
@@ -8,17 +8,56 @@ pmt = TTY::Prompt.new
 
 pmt.puts "\n Standard GEM release flow version #{Release::Gem::VERSION}\n".yellow
 
-begin
 
-  Release::Gem.engine(:gem, root: Dir.getwd, ui: STDOUT) do
+Release::Gem.engine(:gem, root: Dir.getwd, ui: STDOUT) do
 
+  begin
     # step 1 : run test
     run_test(:rspec) 
 
     gem_action do
 
       # step 2 : check dependency
-      release_dependencies
+      release_dependencies do |ops, *args|
+        case ops
+        when :action_start
+          pmt.say "\n Release dependencies starting...\n".yellow
+
+        when :define_gem_prod_config
+
+          config = {}
+          selections = args.first[:gems]
+
+          loop do
+
+            sel = pmt.select("\n The following development gems requires configuration. Please select one to configure") do |m|
+              selections.each do |g|
+                m.choice g, g
+              end
+            end
+
+            config[sel] = {} if config[sel].nil?
+
+            type = pmt.select("\n The gem in production will be runtime or development ? ") do |m|
+              m.choice "Runtime", :runtime
+              m.choice "Development only", :dev
+            end
+
+            config[sel][:type] = type
+
+            ver = pmt.ask("\n Is there specific version pattern (including the ~>/>/>=/= of gemspec) for the gem in production? (Not mandatory) : ")
+            config[sel][:version] = ver if not_empty?(ver)
+
+            pmt.puts " ** Done configure for gem #{sel}"
+            selections.delete_if { |v| v == sel }
+            break if selections.length == 0
+
+          end
+
+          config
+
+        end
+      end
 
       # step 3 : build the gem
       st, ver = build do |ops, *args|
@@ -199,7 +238,7 @@ begin
         end
       end
 
-      
+
       push do |ops, *args|
         case ops
         when :select_remote
@@ -244,17 +283,19 @@ begin
 
     end # vcs_action block
 
-  end # Release::Gem::Engine block
 
-  pmt.puts "\n *** GEM standard release flow done!\n".green
-
-rescue Release::Gem::Abort => ex
-  pmt.puts "\n -- Aborted by user. Message was : #{ex.message}\n".red
-rescue TTY::Reader::InputInterrupt => ex
-rescue Exception => ex
-  pmt.puts "\n -- Error thrown. Message was : #{ex.message}".red
+  rescue Release::Gem::Abort => ex
+    pmt.puts "\n -- Aborted by user. Message was : #{ex.message}\n".red
+  rescue TTY::Reader::InputInterrupt => ex
+  rescue Exception => ex
+    pmt.puts "\n -- Error thrown. Message was : #{ex.message}".red
+    pmt.puts ex.backtrace.join("\n")
+  ensure
+    gem_dependency_restore
+  end
 end
 
+pmt.puts "\n *** GEM standard release flow done!\n".green
 
 
 

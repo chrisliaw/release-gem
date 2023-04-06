@@ -4,17 +4,16 @@ require 'release/gem'
 
 puts "\n Standard GEM CLI release flow version #{Release::Gem::VERSION}\n".yellow
 
-begin
+Release::Gem.engine(:gem, root: Dir.getwd) do
 
-  Release::Gem.engine(:gem, root: Dir.getwd) do
-
+  begin
     # step 1 : run test
     run_test(:rspec) 
 
     gem_cli_action do
 
       # step 2 : check dependency
-      release_dependencies
+      release_dependencies 
 
       # step 3 : build the gem
       st, ver = build
@@ -39,17 +38,20 @@ begin
       push
 
     end # vcs_action block
+  rescue Release::Gem::Abort => ex
+    STDERR.puts "\n -- Aborted by user. Message was : #{ex.message}\n".red
+  rescue TTY::Reader::InputInterrupt => ex
+  rescue Exception => ex
+    STDERR.puts "\n -- Error thrown. Message was : #{ex.message}".red
+    STDERR.puts "\n#{ex.backtrace.join("\n")}" if ENV["RELGEM_DEBUG"] == true
+  ensure 
+    gem_dependency_restore
+  end
 
-  end # Release::Gem::Engine block
+end # Release::Gem::Engine block
 
-  puts "\n *** GEM standard release flow done!\n".green
+puts "\n *** GEM CLI standard release flow done!\n".green
 
-rescue Release::Gem::Abort => ex
-  STDERR.puts "\n -- Aborted by user. Message was : #{ex.message}\n".red
-rescue TTY::Reader::InputInterrupt => ex
-rescue Exception => ex
-  STDERR.puts "\n -- Error thrown. Message was : #{ex.message}".red
-end
 
 
 

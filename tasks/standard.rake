@@ -38,6 +38,12 @@ namespace :gem do
     end
   end
 
+  #desc "Release test"
+  #task :test_release do
+  #  stdFlow = File.join(File.dirname(__FILE__),"..","templates","standard_flow")
+  #  require stdFlow
+  #end
+
   desc "Copy the standard flow to project local so modification of the flow is possible"
   task :customize_flow do
     stdFlow = File.join(File.dirname(__FILE__),"..","templates","standard_cli_flow.rb")
