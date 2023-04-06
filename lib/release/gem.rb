@@ -10,6 +10,7 @@ require 'tty/command'
 
 require_relative "gem/version"
 require_relative 'gem/gem_engine'
+require_relative 'gem/release_infector'
 
 
 module Release

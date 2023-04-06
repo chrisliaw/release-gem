@@ -11,6 +11,7 @@ module Release
 
       def initialize(root, opts = {  })
         @root = root
+        @discardColor = opts[:discardColor] || false
         @devGems = {}
         @gemConfig = {}
         @fileHistory = {}
@@ -80,6 +81,12 @@ module Release
           FileUtils.cp(v,k)
         end
         @fileHistory.clear
+      end
+
+      def infect_gem(gem_root,name, &block)
+        ri = ReleaseInfector.new(gem_root, name)
+        ri.infect(&block)
+        ri.trigger_release_gem(&block)
       end
 
       private

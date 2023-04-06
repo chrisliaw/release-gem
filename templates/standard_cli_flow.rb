@@ -47,7 +47,7 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
   rescue TTY::Reader::InputInterrupt => ex
   rescue Exception => ex
     STDERR.puts "\n -- Error thrown. Message was : #{ex.message}".red
-    STDERR.puts "\n#{ex.backtrace.join("\n")}" if ENV["RELGEM_DEBUG"] == true
+    STDERR.puts "\n#{ex.backtrace.join("\n")}" if ENV["RELGEM_DEBUG"] == "true"
   ensure 
     gem_dependency_restore
   end

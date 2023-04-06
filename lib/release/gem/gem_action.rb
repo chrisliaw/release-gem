@@ -1,7 +1,7 @@
 
 #require 'rake'
 require "bundler/gem_tasks"
-require "rspec/core/rake_task"
+#require "rspec/core/rake_task"
 require 'yaml'
 require_relative 'gemdep'
 
@@ -36,6 +36,13 @@ module Release
             if block
 
               block.call(:action_start, :relase_dependencies)
+
+              gemdepInst.development_gem.each do |k,v|
+                gemdepInst.infect_gem(v, k, &block)
+                block.call(:block_until_dev_gem_done, { name: k, path: v })
+              end
+              
+
               keys = gemdepInst.development_gem.keys
               loop do
                 begin

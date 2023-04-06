@@ -12,6 +12,8 @@ module Release
           opts[:ui] = TTY::Prompt.new
           @inst = Action::VcsAction.new(root,opts)
           @prmt = TTY::Prompt.new
+          @color = opts[:msgColor] || :yellow
+          @discardColor = opts[:discardColor] || false
         end
 
         def exec(&block)
@@ -38,7 +40,7 @@ module Release
               case ops
               when :select_files_to_commit
                 mfiles = args.first
-                @prmt.puts "\n Files already added to staging : ".yellow
+                @prmt.puts pmsg("\n Files already added to staging : ")
                 mfiles[:staged].each do |k,v|
                   v.each do |vv|
                     @prmt.puts " * #{vv}"
@@ -47,7 +49,7 @@ module Release
 
                 @prmt.puts ""
 
-                sel = @prmt.multi_select "\n Following are files that could be added to version control : ".yellow do |m|
+                sel = @prmt.multi_select pmsg("\n Following are files that could be added to version control : ") do |m|
 
                   [:modified, :new, :deleted].each do |cat|
                     mfiles[cat].each do |k,v|
@@ -74,9 +76,9 @@ module Release
                   if not_empty?(s)
                     st, cres = add_to_staging(*s) if not_empty?(s)
                     if st
-                      @prmt.puts "\n Files added successfully".green
+                      @prmt.puts pmsg("\n Files added successfully", :green)
                     else
-                      @prmt.puts "\n Files failed to be added. Message was : #{cres}".red
+                      @prmt.puts pmsg("\n Files failed to be added. Message was : #{cres}", :red)
                     end
                   end
 
@@ -87,8 +89,8 @@ module Release
               when :commit_message
                 msg = ""
                 loop do
-                  msg = @prmt.ask("\n Commit message : ".yellow, required: true)
-                  confirm = @prmt.yes?(" Commit message : #{msg}\n Proceed? No to provide a new commit message ".yellow)
+                  msg = @prmt.ask(pmsg("\n Commit message : "), required: true)
+                  confirm = @prmt.yes?(pmsg(" Commit message : #{msg}\n Proceed? No to provide a new commit message "))
                   if confirm
                     break
                   end
@@ -99,7 +101,7 @@ module Release
               when :staged_elements_of_commit
 
                 elements = args.first
-                @prmt.puts "\n Following files/directories shall be committed in this session : ".yellow
+                @prmt.puts pmsg("\n Following files/directories shall be committed in this session : ")
                 elements.each do |k,v|
                   v.each do |vv|
                     @prmt.puts " * #{vv}"
@@ -107,11 +109,11 @@ module Release
                 end
 
               when :commit_successful
-                @prmt.puts "\n Changes committed".green
+                @prmt.puts pmsg("\n Changes committed",:green)
                 @prmt.puts args.first
 
               when :commit_failed
-                @prmt.puts "\n Changes failed to be committed. Error was : #{args.first}"
+                @prmt.puts pmsg("\n Changes failed to be committed. Error was : #{args.first}")
 
               end
             end
@@ -139,17 +141,17 @@ module Release
 
               case ops
               when :tag_message
-                @prmt.ask("\n Please provide message for the tag : ".yellow, value: "Auto tagging by gem-release gem during releasing version #{@selVer}", required: true)
+                @prmt.ask(pmsg("\n Please provide message for the tag : "), value: "Auto tagging by gem-release gem during releasing version #{@selVer}", required: true)
 
               when :tagging_success
-                @prmt.puts "\n Tagging of source code is successful.".green
+                @prmt.puts pmsg("\n Tagging of source code is successful.", :green)
                 @prmt.puts args.first
 
               when :tagging_failed
-                @prmt.puts "\n Tagging of source code failed. Error was : #{args.first}".red
+                @prmt.puts pmsg("\n Tagging of source code failed. Error was : #{args.first}", :red)
 
               when :no_tagging_required
-                @prmt.puts "\n No tagging required. Source head is the tagged item ".green
+                @prmt.puts pmsg("\n No tagging required. Source head is the tagged item ", :green)
 
               end
             end # preset ?
@@ -178,7 +180,7 @@ module Release
               case ops
               when :select_remote
                 val = args.first
-                sel = @prmt.select("\n Please select one of the remote config below : ") do |m|
+                sel = @prmt.select(pmsg("\n Please select one of the remote config below : ")) do |m|
                   val.each do |k,v|
                     m.choice k, k
                   end
@@ -190,14 +192,14 @@ module Release
                 sel
 
               when :no_remote_repos_defined
-                add = @prmt.yes?("\n No remote configuration defined. Add one now?")
+                add = @prmt.yes?(pmsg("\n No remote configuration defined. Add one now?"))
                 if add
-                  name = @prmt.ask("\n Name of the repository : ", value: "origin", required: true)
-                  url = @prmt.ask("\n URL of the repository : ", required: true)
+                  name = @prmt.ask(pmsg("\n Name of the repository : "), value: "origin", required: true)
+                  url = @prmt.ask(pmsg(" URL of the repository : "), required: true)
 
                   st, res = add_remote(name, url)
                   if st
-                    @prmt.puts "\n Remote configuration added successfully".green
+                    @prmt.puts pmsg("\n Remote configuration added successfully",:green)
                     name
                   else
                     raise Release::Gem::Abort, "Failed to add remote configuration. Error was : #{res}"
@@ -205,15 +207,15 @@ module Release
                 end
 
               when :push_successful
-                @prmt.puts "\n Push success!".green
+                @prmt.puts pmsg("\n Push success!",:green)
                 @prmt.puts args.first
 
               when :push_failed
-                @prmt.puts "\nPush failed. Error was : #{args.first}".red
+                @prmt.puts pmsg("\nPush failed. Error was : #{args.first}",:red)
 
               when :no_changes_to_push
                 val = args.first
-                @prmt.puts "\n Local is in sync with remote (#{val[:remote]}/#{val[:branch]}). Push is not required. "
+                @prmt.puts pmsg("\n Local is in sync with remote (#{val[:remote]}/#{val[:branch]}). Push is not required. ")
               end
             end
 
@@ -223,6 +225,22 @@ module Release
 
         def method_missing(mtd, *args, &block)
           @inst.send(mtd, *args, &block)
+        end
+
+        def pmsg(msg, color = nil)
+          if not msg.nil?
+            if @discardColor == true
+              msg
+            else
+              if not_empty?(color)
+                msg.send(color)
+              elsif not_empty?(@msgColor)
+                msg.send(@msgColor)
+              else
+                msg
+              end
+            end
+          end
         end
 
       end

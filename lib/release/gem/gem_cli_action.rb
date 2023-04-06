@@ -12,6 +12,8 @@ module Release
           opts[:ui] = TTY::Prompt.new
           @inst = Action::GemAction.new(root, opts)
           @pmt = opts[:tty] || opts[:ui]
+          @msgColor = opts[:msgColor] || :yellow 
+          @discardColor = opts[:discardColor] || false
         end
 
         def exec(&block)
@@ -22,7 +24,58 @@ module Release
           @inst.release_dependencies do |ops, *args|
             case ops
             when :action_start
-              @pmt.say "\n Release dependencies starting...\n".yellow
+              @pmt.say pmsg("\n Release dependencies starting...\n")
+
+            ## from release_infector
+            when :multiple_gemspec
+              v = args.first
+              @pmt.select(pmsg("\n There are multiple gemspecs found. Please select one to proceed : ")) do |m|
+                v.each do |vv|
+                  m.choice vv, vv
+                end
+              end
+
+            when :adding_to_gemspec
+              v = args.first
+              @pmt.say pmsg("\n Adding release-gem to gemspec '#{v[:gemspec]}'")
+
+            when :gemspec_updated
+              v = args.first
+              @pmt.say pmsg("\n Gemspec file of GEM '#{v[:name]}' updated with release-gem gem")
+
+            when :adding_to_rackfile
+              v = args.first
+              @pmt.say pmsg("\n Adding require to Rakefile at #{v[:rakefile]}")
+
+            when :creating_new_rakefile
+              v = args.first
+              @pmt.say pmsg("\n Creating new Rakefile at #{v[:rakefile]}")
+
+            when :rakefile_updated
+              v = args.first
+              @pmt.say pmsg("\n Rakefile '#{v[:rakefile]}' updated!")
+
+            when :select_terminal
+              v = args.first
+              @pmt.select(pmsg("\n Please select a terminal for development GEM '#{v[:name]}' release : ")) do |m|
+                v[:options].each do |t|
+                  m.choice t, t
+                end
+              end
+
+            when :new_terminal_launching
+              v = args.first
+              @pmt.say pmsg("\n New terminal lanching for GEM '#{v[:name]}' using terminal '#{v[:terminal]}'")
+
+            when :new_terminal_launched
+              v = args.first
+              @pmt.say pmsg("\n New terminal launched for GEM '#{v[:name]}' using terminal '#{v[:terminal]}'")
+
+            when :block_until_dev_gem_done
+              v = args.first
+              @pmt.yes? pmsg("\n Development GEM '#{v[:name]}' has separate windows for release. Is it done? ")
+
+            ### End release_infector
 
             when :define_gem_prod_config
 
@@ -31,7 +84,7 @@ module Release
 
               loop do
 
-                sel = @pmt.select("\n The following development gems requires configuration. Please select one to configure ".yellow) do |m|
+                sel = @pmt.select(pmsg("\n The following development gems requires configuration. Please select one to configure ")) do |m|
                   selections.each do |g|
                     m.choice g, g
                   end
@@ -39,17 +92,17 @@ module Release
 
                 config[sel] = {} if config[sel].nil?
 
-                type = @pmt.select("\n The gem in production will be runtime or development ? ".yellow) do |m|
+                type = @pmt.select(pmsg("\n The gem in production will be runtime or development ? ")) do |m|
                   m.choice "Runtime", :runtime
                   m.choice "Development only", :dev
                 end
 
                 config[sel][:type] = type
 
-                ver = @pmt.ask("\n Is there specific version pattern (including the ~>/>/>=/= of gemspec) for the gem in production? (Not mandatory) : ".yellow)
+                ver = @pmt.ask(pmsg("\n Is there specific version pattern (including the ~>/>/>=/= of gemspec) for the gem in production? (Not mandatory) : "))
                 config[sel][:version] = ver if not_empty?(ver)
 
-                @pmt.puts " ** Done configure for gem #{sel}".yellow
+                @pmt.puts pmsg(" ** Done configure for gem #{sel}")
                 selections.delete_if { |v| v == sel }
                 break if selections.length == 0
 
@@ -58,10 +111,10 @@ module Release
               config
 
             when :development_gem_temporary_promoted
-              @pmt.puts "\n Development gem(s) temporary promoted to production status".yellow
+              @pmt.puts pmsg("\n Development gem(s) temporary promoted to production status")
 
             when :no_development_gems_found
-              @pmt.puts "\n No development gem(s) in used found".yellow
+              @pmt.puts pmsg("\n No development gem(s) in used found")
 
             end
           end
@@ -73,7 +126,7 @@ module Release
           @inst.build do |ops, *args|
             case ops
             when :action_start
-              @pmt.say " Gem building starting...\n".yellow
+              @pmt.say pmsg(" Gem building starting...\n")
             when :select_version
               preset = false
               if block
@@ -90,7 +143,7 @@ module Release
               if preset
 
                 opts = args.first
-                res = @pmt.select("\n Please select new gem version : \n".yellow) do |m|
+                res = @pmt.select(pmsg("\n Please select new gem version : \n")) do |m|
                   opts[:proposed_next].reverse.each do |v|
                     m.choice v,v
                   end
@@ -103,8 +156,8 @@ module Release
 
                 if res == :custom
                   loop do
-                    res = @pmt.ask("\n Please provide custom version number for the release : ".yellow,required: true)
-                    confirmed = @pmt.yes?("\n Use version '#{res}'? No to try again")
+                    res = @pmt.ask(pmsg("\n Please provide custom version number for the release : "),required: true)
+                    confirmed = @pmt.yes?(pmsg("\n Use version '#{res}'? No to try again"))
                     break if confirmed
                   end
                 end
@@ -128,7 +181,7 @@ module Release
 
               if preset
 
-                res = @pmt.select("\n There are multiple version file found. Please select which one to update : ".yellow) do |m|
+                res = @pmt.select(pmsg("\n There are multiple version file found. Please select which one to update : ")) do |m|
                   opts = args.first
                   opts.each do |f|
                     m.choice f,f
@@ -144,7 +197,7 @@ module Release
               @selVersion = args.first
 
             when :gem_build_successfully
-              @pmt.puts "\n Gem version '#{args.first}' built successfully".green
+              @pmt.puts pmsg("\n Gem version '#{args.first}' built successfully", :green)
               @inst.register(:selected_version, args.first)
               [true, args.first]
             end
@@ -158,7 +211,7 @@ module Release
             case ops
             when :multiple_rubygems_account
               creds = args.first
-              res = @pmt.select("\n Multiple rubygems account detected. Please select one : ".yellow) do |m|
+              res = @pmt.select(pmsg("\n Multiple rubygems account detected. Please select one : ")) do |m|
                 creds.each do |k,v|
                   m.choice k,k
                 end
@@ -173,9 +226,9 @@ module Release
               st = pargs.first
               res = pargs[1]
               if st
-                @pmt.puts "\n Gem push successful.".green
+                @pmt.puts pmsg("\n Gem push successful.", :green)
               else
-                @pmt.puts "\n Gem push failed. Error was :\n #{res}".red
+                @pmt.puts pmsg("\n Gem push failed. Error was :\n #{res}", :red)
               end
             end
           end
@@ -184,7 +237,7 @@ module Release
 
         def install(*args, &block)
 
-          sysInst = @pmt.yes?("\n Install release into system? ".yellow)
+          sysInst = @pmt.yes?(pmsg("\n Install release into system? "))
           if sysInst
             @inst.install(*args)
           end
@@ -193,6 +246,22 @@ module Release
 
         def method_missing(mtd, *args, &block)
           @inst.send(mtd,*args, &block)
+        end
+
+        def pmsg(msg, color = nil)
+          if not msg.nil?
+            if @discardColor == true
+              msg
+            else
+              if not_empty?(color)
+                msg.send(color)
+              elsif not_empty?(@msgColor)
+                msg.send(@msgColor)
+              else
+                msg
+              end
+            end
+          end
         end
 
       end
