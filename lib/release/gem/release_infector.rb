@@ -22,7 +22,7 @@ module Release
         if not is_release_gem_installed?
           add_to_gemspec(&block)
           Bundler.with_clean_env do
-            res = `cd #{@root} && bundle`
+            res = `cd #{@root} && bundle update 2>&1`
             puts res
           end
         end
