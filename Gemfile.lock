@@ -1,0 +1,78 @@
+GIT
+  remote: git_cli
+  revision: 05d83d28f37f4023920b6bf91d975b818d0f13fe
+  branch: master
+  specs:
+    git_cli (0.11.2)
+      gvcs
+      ptools (~> 1.4.0)
+      teLogger
+      toolrack
+
+GIT
+  remote: gvcs
+  revision: 698970026596bdff48e475c92387287b5966dd1e
+  branch: master
+  specs:
+    gvcs (0.1.1)
+
+PATH
+  remote: .
+  specs:
+    release-gem (0.1.0)
+      colorize
+      teLogger
+      toolrack
+      tty-command
+      tty-prompt
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    colorize (0.8.1)
+    diff-lcs (1.5.0)
+    pastel (0.8.0)
+      tty-color (~> 0.5)
+    ptools (1.4.3)
+    rake (13.0.6)
+    rspec (3.12.0)
+      rspec-core (~> 3.12.0)
+      rspec-expectations (~> 3.12.0)
+      rspec-mocks (~> 3.12.0)
+    rspec-core (3.12.1)
+      rspec-support (~> 3.12.0)
+    rspec-expectations (3.12.2)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.12.0)
+    rspec-mocks (3.12.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.12.0)
+    rspec-support (3.12.0)
+    teLogger (0.2.2)
+    toolrack (0.21.0)
+    tty-color (0.6.0)
+    tty-command (0.10.1)
+      pastel (~> 0.8)
+    tty-cursor (0.7.1)
+    tty-prompt (0.23.1)
+      pastel (~> 0.8)
+      tty-reader (~> 0.8)
+    tty-reader (0.9.0)
+      tty-cursor (~> 0.7)
+      tty-screen (~> 0.8)
+      wisper (~> 2.0)
+    tty-screen (0.8.1)
+    wisper (2.0.1)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  git_cli!
+  gvcs!
+  rake (~> 13.0)
+  release-gem!
+  rspec (~> 3.0)
+
+BUNDLED WITH
+   2.4.10
