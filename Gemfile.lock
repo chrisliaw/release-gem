@@ -19,7 +19,7 @@ GIT
 PATH
   remote: .
   specs:
-    release-gem (0.1.14)
+    release-gem (0.1.15)
       colorize
       teLogger
       toolrack
