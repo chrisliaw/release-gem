@@ -20,8 +20,49 @@ module Release
           instance_eval(&block) if block
         end
 
-        def overview_changes(*args, &block)
-          @inst.overview_changes do |ops, *args|
+        def manage_workspace(*args, &block)
+         
+          loop do
+
+            ops = @prmt.select(pmsg("\n Please select a VCS workspace operation : ")) do |m|
+
+              m.choice "Add", :add
+              m.choice "Ignore", :ignore
+              m.choice "Diff", :diff
+              m.choice "Remove staged file", :remove_staged
+              m.choice "Delete file", :del
+              m.choice "Commit", :commit
+              m.choice "Done", :done
+              m.choice "Abort", :abort
+
+            end
+
+            case ops
+            when :abort
+              raise Release::Gem::Abort, "User aborted"
+            when :add
+              add
+            when :diff
+              diff
+            when :ignore
+              ignore
+            when :remove_staged
+              remove_staged
+            when :del
+              delete_file
+            when :commit
+              commit
+              break
+            when :done
+              break
+            end
+
+          end
+
+        end
+
+        def add(*input, &block)
+          @inst.add do |ops, *args|
             preset = false
             if block
               res = block.call(ops, *args)
@@ -36,70 +77,223 @@ module Release
 
             if preset
               case ops
-              when :select_files_to_manage
+              when :select_files_to_add
+
                 mfiles = args.first
+                @prmt.puts pmsg("\n Files already added to staging : ")
+                mfiles[:staged].each do |k,v|
+                  v.each do |vv|
+                    @prmt.puts " * #{vv}"
+                  end
+                end
 
-                sel = @prmt.select pmsg("\n Following are files that could be managed : ") do |m|
-
-                  [:staged, :modified, :new, :deleted].each do |cat|
-                    mfiles[cat].each do |k,v|
-                      v.each do |vv|
-                        m.choice vv, vv
-                      end
+                @prmt.puts ""
+                res = []
+                [:modified, :new, :deleted].each do |cat|
+                  mfiles[cat].each do |k,v|
+                    v.each do |vv|
+                      res << vv 
                     end
+                  end
+                end
 
+                sel = @prmt.multi_select pmsg("\n Following are files that could be added to version control : ") do |m|
+
+                  res.sort.each do |f|
+                    m.choice f, f.path
                   end
 
                   m.choice "Done", :done
-
+                  m.choice "Abort", :abort
                 end
 
-                if sel.is_a?(GitCli::Delta::VCSItem)
-
-                  selOps = @prmt.select pmsg("\n What do you want to do with file '#{sel.path}'?") do |m|
-
-                    m.choice "Diff", :diff  if not (sel.is_a?(GitCli::Delta::NewFile) or sel.is_a?(GitCli::Delta::NewDir)) 
-                    m.choice "Ignore", :ignore
-                    m.choice "Remove from staging", :remove_from_staging if sel.is_a?(GitCli::Delta::StagedFile)
-                    m.choice "Delete", :delete if (sel.is_a?(GitCli::Delta::NewFile) or sel.is_a?(GitCli::Delta::NewDir)) 
-                    m.choice "Done", :done
-                  end
-
-                  case selOps
-                  when :diff
-                    st, res = @inst.diff_file(sel.path)
-                    puts res
-                    STDIN.getc
-                  when :ignore
-                    confirm = @prmt.yes?(pmsg("\n Add file '#{sel.path}' to gitignore file?"))
-                    if confirm
-                      @inst.ignore(sel.path)
-                    end
-                  when :remove_from_staging
-                    confirm = @prmt.yes?(pmsg("\n Remove file '#{sel.path}' from staging?"))
-                    if confirm
-                      @inst.remove_from_staging(sel.path)
-                    end
-                  when :delete
-                    skip = @prmt.no?(pmsg("\n Delete the file '#{sel.path}' from file system? NOTE THIS CANNOT BE UNDONE! "))
-                    if not skip
-                      FileUtils.rm(sel.path)
-                    end
-                  when :done
-                  end
-
+                if sel.include?(:abort)
+                  raise Release::Gem::Abort, "User aborted"
+                else
+                  sel
                 end
 
-                sel
+              when :files_added_successfully
+                v = args.first
+                @prmt.puts "\n #{v[:count]} file(s) added successfully.\n#{v[:output]}"
+
+              when :files_failed_to_be_added
+                v = args.first
+                @prmt.puts "\n File(s) failed to be added. Error was : \n#{v[:output]}"
 
               end
+
             end
 
-          end
-        end # overview_changes
+          end # block of add()
+        end
 
-        def commit_new_files(*args, &block)
-          res = @inst.commit_new_files do |ops, *args|
+        def diff(*input, &block)
+          @inst.diff do |ops, *args|
+            preset = false
+            if block
+              res = block.call(ops, *args)
+              if res.nil?
+                preset = true
+              else
+                res
+              end
+            else
+              preset = true
+            end
+
+            if preset
+              case ops
+              when :select_files_to_diff
+
+                mfiles = args.first
+                res = []
+                [:modified, :staged].each do |cat|
+                  mfiles[cat].each do |k,v|
+                    v.each do |vv|
+                      res << vv 
+                    end
+                  end
+                end
+
+                sel = @prmt.multi_select pmsg("\n Select files for diff operation : ") do |m|
+
+                  res.sort.each do |f|
+                    m.choice f, f.path
+                  end
+
+                  m.choice "Done", :done
+                  m.choice "Abort", :abort
+                end
+
+                if sel.include?(:abort)
+                  raise Release::Gem::Abort, "User aborted"
+                else
+                  sel
+                end
+
+              when :diff_file_result
+                v = args.first
+                @prmt.puts "Diff result for file '#{v[:file]}'"
+                puts v[:output].light_blue
+                STDIN.gets
+
+              when :diff_file_error
+                v = args.first
+                @prmt.puts "\n Failed to diff file '#{v[:file]}'. Error was : \n#{v[:output]}"
+
+              end
+
+            end
+
+          end # block of add()
+        end
+
+        def ignore(*input, &block)
+          @inst.ignore do |ops, *args|
+            preset = false
+            if block
+              res = block.call(ops, *args)
+              if res.nil?
+                preset = true
+              else
+                res
+              end
+            else
+              preset = true
+            end
+
+            if preset
+              case ops
+              when :select_files_to_ignore
+
+                mfiles = args.first
+                sel = @prmt.multi_select pmsg("\n Following are files that could be ignored : ") do |m|
+
+                  mfiles[:files].sort.each do |v|
+                    m.choice v, v.path
+                  end
+
+
+                  m.choice "Done", :done
+                  m.choice "Abort", :abort
+                end
+
+                if sel.include?(:abort)
+                  raise Release::Gem::Abort, "User aborted"
+                else
+                  sel
+                end
+
+              when :files_ignored_successfully
+                v = args.first
+                @prmt.puts "\n #{v[:count]} file(s) ignored successfully.\n#{v[:output]}"
+
+              when :files_failed_to_be_ignored
+                v = args.first
+                @prmt.puts "\n File(s) failed to be ignored. Error was : \n#{v[:output]}"
+
+              end
+
+            end
+
+          end # block of add()
+        end
+
+        def remove_staged(*input, &block)
+          @inst.remove_from_staging do |ops, *args|
+            preset = false
+            if block
+              res = block.call(ops, *args)
+              if res.nil?
+                preset = true
+              else
+                res
+              end
+            else
+              preset = true
+            end
+
+            if preset
+              case ops
+              when :select_files_to_remove
+
+                mfiles = args.first
+
+                sel = @prmt.multi_select pmsg("\n Following are files that could be removed from staging : ") do |m|
+
+                  mfiles[:files].sort.each do |v|
+                    m.choice v, v.path
+                  end
+
+
+                  m.choice "Done", :done
+                  m.choice "Abort", :abort
+                end
+
+                if sel.include?(:abort)
+                  raise Release::Gem::Abort, "User aborted"
+                else
+                  sel
+                end
+
+              when :files_removed_successfully
+                v = args.first
+                @prmt.puts "\n #{v[:count]} file(s) removed successfully.\n#{v[:output]}"
+
+              when :files_removed_to_be_ignored
+                v = args.first
+                @prmt.puts "\n File(s) failed to be removed. Error was : \n#{v[:output]}"
+
+              end
+
+            end
+
+          end # block
+        end
+
+        def delete_file(*args, &block)
+          res = @inst.delete_file do |ops, *args|
             
             preset = false
             if block
@@ -116,85 +310,66 @@ module Release
             if preset
 
               case ops
-              when :select_files_to_commit
+              when :select_files_to_delete
                 mfiles = args.first
-                @prmt.puts pmsg("\n Files already added to staging : ")
-                mfiles[:staged].each do |k,v|
-                  v.each do |vv|
-                    @prmt.puts " * #{vv}"
-                  end
-                end
 
-                @prmt.puts ""
-
-                sel = @prmt.multi_select pmsg("\n Following are new files that could be added to version control.\n Don't worry if you found not all changed files are here. There will be another commit session after the build : ") do |m|
-
-                  mfiles[:new].each do |k,v|
+                files = []
+                [:new, :staged, :modified].each do |cat|
+                  mfiles[cat].each do |k,v|
                     v.each do |vv|
-                      m.choice vv, vv.path
+                      files << vv
+                      #m.choice vv, vv
                     end
                   end
 
-                  m.choice "Skip", :skip #if mfiles[:counter] == 0
+                end
+
+
+                sel = @prmt.multi_select pmsg("\n Following are files that could be deleted : ") do |m|
+                  files.sort do |f|
+                    m.choice f, f
+                  end
                   m.choice "Done", :done
                   m.choice "Abort", :abort
                 end
 
+
                 if sel.include?(:abort)
                   raise Release::Gem::Abort, "User aborted"
-                elsif sel.include?(:skip)
-                  :skip 
                 else
-                  res = :done if sel.include?(:done)
-                  s = sel.clone
-                  s.delete_if { |e| e == :done }
-                  if not_empty?(s)
-                    st, cres = add_to_staging(*s) if not_empty?(s)
-                    if st
-                      @prmt.puts pmsg("\n Files added successfully", :green)
-                    else
-                      @prmt.puts pmsg("\n Files failed to be added. Message was : #{cres}", :red)
-                    end
-                  end
-
-                  res
-
+                  sel
                 end
 
-              when :commit_message
-                msg = ""
-                loop do
-                  msg = @prmt.ask(pmsg("\n Commit message : "), required: true)
-                  confirm = @prmt.yes?(pmsg(" Commit message : #{msg}\n Proceed? No to provide a new commit message "))
-                  if confirm
-                    break
-                  end
-                end
+              when :confirm_nontrack_delete
+                v = args.first
+                @prmt.yes?(pmsg("\n Delete non-tracked file '#{v}'? "))
 
-                msg
+              when :nontrack_file_deleted
+                v = args.first
+                @prmt.puts pmsg("\n Non tracked file '#{v}' deleted ")
 
-              when :staged_elements_of_commit
+              when :confirm_vcs_delete
+                v = args.first
+                not @prmt.no?(pmsg("\n Delete version-controlled file '#{v}'?\n After delete the file will no longer keeping track of changes. "))
 
-                elements = args.first
-                @prmt.puts pmsg("\n Following new files/directories shall be committed in this session : ")
-                elements.each do |k,v|
-                  v.each do |vv|
-                    @prmt.puts " * #{vv}"
-                  end
-                end
+              when :vcs_file_deleted
+                v = args.first
+                @prmt.puts pmsg("\n Version-controlled file '#{v}' deleted ")
 
-              when :commit_successful
-                @prmt.puts pmsg("\n Changes committed",:green)
-                @prmt.puts args.first
+              when :confirm_staged_delete
+                v = args.first
+                @prmt.yes?(pmsg("\n Delete staged file '#{v}'?\n After delete the file shall be removed from staging. The file will still exist physically "))
 
-              when :commit_failed
-                @prmt.puts pmsg("\n Changes failed to be committed. Error was : #{args.first}")
+              when :staged_file_deleted
+                v = args.first
+                @prmt.puts pmsg("\n Staged file '#{v}' deleted ")
 
               end
             end
-          end # commit_new_files block
+          end # delete_file block
 
-        end # commit_new_files
+        end # delete_file
+
 
 
         def commit(*args, &block)
@@ -226,15 +401,22 @@ module Release
 
                 @prmt.puts ""
 
-                sel = @prmt.multi_select pmsg("\n Following are files that could be added to version control : ") do |m|
-
-                  [:modified, :new, :deleted].each do |cat|
-                    mfiles[cat].each do |k,v|
-                      v.each do |vv|
-                        m.choice vv, vv.path
-                      end
+                files = []
+                [:modified, :new, :deleted].each do |cat|
+                  mfiles[cat].each do |k,v|
+                    v.each do |vv|
+                      files << vv
+                      #m.choice vv, vv.path
                     end
+                  end
 
+                end
+
+
+                sel = @prmt.multi_select pmsg("\n Following are files that could be added to version control : ") do |m|
+                  
+                  files.sort.each do |f|
+                    m.choice f, f.path
                   end
 
                   m.choice "Skip", :skip #if mfiles[:counter] == 0
@@ -318,14 +500,17 @@ module Release
 
               case ops
               when :tag_message
-                @prmt.ask(pmsg("\n Please provide message for the tag : "), value: "Auto tagging by gem-release gem during releasing version #{@selVer}", required: true)
+                v = args.first
+                @prmt.ask(pmsg("\n Please provide message for the tag : "), value: "Auto tagging by gem-release gem during releasing version #{v[:tag]}", required: true)
 
               when :tagging_success
-                @prmt.puts pmsg("\n Tagging of source code is successful.", :green)
-                @prmt.puts args.first
+                v = args.first
+                @prmt.puts pmsg("\n Tagging of source code with tag '#{v[:tag]}' is successful.", :green)
+                @prmt.puts v[:output]
 
               when :tagging_failed
-                @prmt.puts pmsg("\n Tagging of source code failed. Error was : #{args.first}", :red)
+                v = args.first
+                @prmt.puts pmsg("\n Tagging of source code with tag '#{v[:tag]}' failed. Error was : #{v[:output]}", :red)
 
               when :no_tagging_required
                 @prmt.puts pmsg("\n No tagging required. Source head is the tagged item ", :green)

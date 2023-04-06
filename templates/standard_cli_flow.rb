@@ -10,15 +10,11 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
     # step 1 : run test
     run_test(:rspec) 
 
-    # to allow user to get a view on what's changed
-    # and allow user to ignore or remove file from staging
-    vcs_cli_overview_changes
-
     # Reason to put it here is because gem build shall
     # only consider files already inside git system via
     # git ls-files command. Anything new that is not yet
     # check in will not be packup by the gem build process
-    vcs_cli_commit
+    vcs_cli_manage_workspace
 
     # step 2 : check dependency
     gem_cli_release_dependencies 

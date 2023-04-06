@@ -42,11 +42,10 @@ module Release
           instance_eval(&block) if block
         end
 
-        def overview_changes(&block)
-
-          res = :done
+        def add(&block)
+          
           if block
-
+            
             loop do
 
               stgDir, stgFiles = @ws.staged_files
@@ -63,83 +62,217 @@ module Release
               delFiles.delete_if { |f| stgFiles.include?(f) }
               delDir.delete_if { |f| stgDir.include?(f) }
 
-              # block should call vcs for remove, ignore and diff
-              res = block.call(:select_files_to_manage, { modified: { files: modFiles, dirs: modDir }, new: { files: newFiles, dirs: newDir }, deleted: { files: delFiles, dirs: delDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
+              res = block.call(:select_files_to_add, { modified: { files: modFiles, dirs: modDir }, new: { files: newFiles, dirs: newDir }, deleted: { files: delFiles, dirs: delDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
 
-              break if not res.is_a?(GitCli::Delta::VCSItem) and res == :done
+              doneTriggered = false
+              sel = res.clone
+              if sel.include?(:done)
+                sel.delete_if { |e| e == :done }
+                doneTriggered = true
+              end
+
+              if not_empty?(sel)
+                st, rres = @ws.add_to_staging(*sel)
+                if st
+                  block.call(:files_added_successfully, { count: sel.length, output: rres })
+                else
+                  block.call(:files_failed_to_be_added, { output: rres } )
+                end
+              else
+                block.call(:no_files_given)
+              end
+
+              break if doneTriggered
 
             end
 
           end
 
-          res
-          
         end
 
-        # 
-        # Special operation since the gem build will only include files from
-        # git ls-files
-        #
-        def commit_new_files(msg = nil, &block)
-
-          res = :value
+        def diff(&block)
+          
           if block
-
+            
             loop do
 
               stgDir, stgFiles = @ws.staged_files
-              newDir, newFiles = @ws.new_files
+              modDir, modFiles = @ws.modified_files
 
-              if is_empty?(newFiles)
-                res = :skip
-                break
+              modFiles.delete_if { |f| stgFiles.include?(f) }
+              modDir.delete_if { |f| stgDir.include?(f) }
+              
+              res = block.call(:select_files_to_diff, { modified: { files: modFiles, dirs: modDir },  staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
+
+              doneTriggered = false
+              sel = res.clone
+              if sel.include?(:done)
+                sel.delete_if { |e| e == :done }
+                doneTriggered = true
               end
 
-              newFiles.delete_if { |f| stgFiles.include?(f) }
-              newDir.delete_if { |f| stgDir.include?(f) }
-
-              res = block.call(:select_files_to_commit, { new: { files: newFiles, dirs: newDir }, staged: { files: stgFiles, dirs: stgDir }, vcs: self } )
-
-              break if res == :skip or res == :done
-
-            end
-
-            if res == :done
-
-              stgDir, stgFiles = @ws.staged_files
-              block.call(:staged_elements_of_commit, { files: stgFiles, dirs: stgDir })
-
-              msg = block.call(:commit_message) if is_empty?(msg) 
-              raise VcsActionError, "Commit message is empty" if is_empty?(msg)
-
-              cp "Commit with user message : #{msg}"
-              st, res = @ws.commit(msg)
-              if st
-                block.call(:commit_successful, res) if block
+              if not_empty?(sel)
+                sel.each do |s|
+                  st, rres = @ws.diff_file(s)
+                  if st
+                    block.call(:diff_file_result, { file: s, output: rres })
+                  else
+                    block.call(:diff_file_error, { file: s, output: rres } )
+                  end
+                end
               else
-                block.call(:commit_failed, res) if block
+                block.call(:no_files_given)
               end
-              [st, res]
+
+              break if doneTriggered
 
             end
-
-
-          elsif not_empty?(msg)
-
-            newDir, newFiles = @ws.new_files
-            add_to_staging(*newFiles)
-
-            cp "Commit with user message : #{msg}"
-            st, res = @ws.commit(msg)
-            if st
-              block.call(:commit_successful, res) if block
-            else
-              block.call(:commit_failed, res) if block
-            end
-            [st, res]
 
           end
 
+        end
+
+        def ignore(*files, &block)
+          
+          if block
+            
+            loop do
+
+              newDir, newFiles = @ws.new_files
+
+              res = block.call(:select_files_to_ignore, { files: newFiles, dirs: newDir } )
+
+              doneTriggered = false
+              sel = res.clone
+              if sel.include?(:done)
+                sel.delete_if { |e| e == :done }
+                doneTriggered = true
+              end
+
+              if not_empty?(sel)
+                st, rres = @ws.ignore(*sel)
+                if st
+                  block.call(:files_ignored_successfully, { count: sel.length, output: rres })
+                else
+                  block.call(:files_failed_to_be_ignored, { output: rres } )
+                end
+              else
+                block.call(:no_files_given)
+              end
+
+              break if doneTriggered
+
+            end
+
+          else
+
+            @ws.ignore(*files) if not_empty?(files)
+
+          end
+
+        end
+
+        def remove_from_staging(*files, &block)
+          
+          if block
+            
+            loop do
+
+              stgDir, stgFiles = @ws.staged_files
+
+              res = block.call(:select_files_to_remove, { files: stgFiles, dirs: stgDir } )
+
+              doneTriggered = false
+              sel = res.clone
+              if sel.include?(:done)
+                sel.delete_if { |e| e == :done }
+                doneTriggered = true
+              end
+
+              if not_empty?(sel)
+                st, rres = @ws.remove_from_staging(*sel)
+                if st
+                  block.call(:files_removed_successfully, { count: sel.length, output: rres })
+                else
+                  block.call(:files_removed_to_be_ignored, { output: rres } )
+                end
+              else
+                block.call(:no_files_given)
+              end
+
+              break if doneTriggered
+
+            end
+
+          else
+
+            @ws.removed_from_staging(*files) if not_empty?(files)
+
+          end
+
+        end
+
+        def delete_file(*files, &block)
+          
+          if block
+            
+            loop do
+
+              stgDir, stgFiles = @ws.staged_files
+              modDir, modFiles = @ws.modified_files
+              newDir, newFiles = @ws.new_files
+
+              modFiles.delete_if { |f| stgFiles.include?(f) }
+              modDir.delete_if { |f| stgDir.include?(f) }
+              
+              newFiles.delete_if { |f| stgFiles.include?(f) }
+              newDir.delete_if { |f| stgDir.include?(f) }
+
+              res = block.call(:select_files_to_delete, { modified: { files: modFiles, dirs: modDir }, new: { files: newFiles, dirs: newDir }, staged: { files: stgFiles, dirs: stgDir } } )
+
+              doneTriggered = false
+              sel = res.clone
+              if sel.include?(:done)
+                sel.delete_if { |e| e == :done }
+                doneTriggered = true
+              end
+
+              if not_empty?(sel)
+                staged = []
+                nonTrack = []
+                sel.each do |s|
+                  if s.is_a?(GitCli::Delta::NewFile)
+                    confirm = block.call(:confirm_nontrack_delete, s.path)
+                    if confirm
+                      FileUtils.rm(s.path)
+                      block.call(:nontrack_file_deleted, s.path)
+                    end
+                  elsif s.is_a?(GitCli::Delta::ModifiedFile)
+                    # not staged
+                    confirm = block.call(:confirm_vcs_delete, s.path)
+                    puts "vcs confirm : #{confirm}"
+                    if confirm
+                      @ws.remove_from_vcs(s.path)
+                      block.call(:vcs_file_deleted, s.path)
+                    end
+                  elsif s.is_a?(GitCli::Delta::StagedFile)
+                    confirm = block.call(:confirm_staged_delete, s.path)
+                    if confirm
+                      @ws.remove_from_staging(s.path)
+                      block.call(:staged_file_deleted, s.path)
+                    end
+                  end
+                end
+
+              else
+                block.call(:no_files_given)
+              end
+
+              break if doneTriggered
+
+            end
+
+          end
         end
 
         def commit(msg = nil, &block)
@@ -220,16 +353,16 @@ module Release
 
             if is_empty?(msg)
               if block
-                msg = block.call(:tag_message)
+                msg = block.call(:tag_message, { tag: tag })
               end
             end
 
             cp "tagged with name : #{tag} and message : #{msg}"
             st, res = @ws.create_tag(tag, msg)
             if st
-              block.call(:tagging_success, res) if block
+              block.call(:tagging_success, { tag: tag, output: res }) if block
             else
-              block.call(:tagging_failed, res) if block
+              block.call(:tagging_failed, { tag: tag, output: res }) if block
             end
 
             [st, res]
@@ -312,14 +445,6 @@ module Release
             @ws.add_to_staging(*res)
           end
 
-        end
-
-        def ignore(*files)
-          @ws.ignore(*files) 
-        end
-
-        def remove_from_staging(*files)
-          @ws.remove_from_staging(*files) 
         end
 
 
