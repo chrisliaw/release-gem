@@ -22,7 +22,7 @@ module Release
         if not is_release_gem_installed?
           add_to_gemspec(&block)
           Bundler.with_clean_env do
-            res = `cd #{@root} && bundle update 2>&1`
+            res = `cd #{@root} && bundle`
             puts res
           end
         end
@@ -42,7 +42,7 @@ module Release
         terminal = ""
         Bundler.with_clean_env do
 
-          cmd = "cd #{@root} && rake gem:release" 
+          cmd = "cd #{@root} && bundle update 2>&1 && rake gem:release" 
           if block
             terminal = block.call(:select_terminal, name: @name, options: poss) if block
             if terminal != :skip
