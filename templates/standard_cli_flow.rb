@@ -10,6 +10,9 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
     # step 1 : run test
     run_test(:rspec) 
 
+    # to allow user to get a view on what's changed
+    vcs_commit
+
     gem_cli_action do
 
       # step 2 : check dependency
