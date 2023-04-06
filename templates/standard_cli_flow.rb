@@ -34,17 +34,13 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
       gem_cli_install(version: ver)
     end
 
-    puts "version : #{ver}"
-
-    @selVer = value(:selected_version)
-
     vcs_add_to_staging_if_commit_before("Gemfile.lock")
     vcs_add_to_staging(value(:version_file_path))
 
-    vcs_commit("Commit after gem version #{@selVer} built")
+    vcs_commit("Commit after gem version #{ver} built")
 
     # step 7 : tag the source code
-    vcs_cli_tag( tag: @selVer )      
+    vcs_cli_tag( tag: ver )      
 
     # step 8 : Push the source code
     vcs_cli_push
