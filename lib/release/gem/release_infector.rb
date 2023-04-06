@@ -44,17 +44,17 @@ module Release
 
           cmd = "cd #{@root} && bundle update 2>&1 && rake gem:release" 
           if block
-            terminal = block.call(:select_terminal, name: @name, options: poss)
+            terminal = block.call(:select_terminal, name: @name, options: poss) if block
             if terminal != :skip
               terminal = poss.first if is_empty?(terminal)
 
-              block.call(:new_terminal_launching, name: @name, terminal: terminal)
+              block.call(:new_terminal_launching, name: @name, terminal: terminal) if block
               tu_new_terminal(terminal, cmd)
             end
 
           else
             terminal = poss.first
-            block.call(:new_terminal_launching, name: @name, terminal: terminal)
+            block.call(:new_terminal_launching, name: @name, terminal: terminal) if block
             tu_new_terminal(terminal, cmd)
           end
 
@@ -121,7 +121,7 @@ module Release
           f.puts "  spec.add_development_dependency 'release-gem'"
           f.puts "end"
         end
-        block.call(:gemspec_updated, name: @name, gemspec: gs )
+        block.call(:gemspec_updated, name: @name, gemspec: gs ) if block
 
       end # add_to_gemspec
 
@@ -141,13 +141,13 @@ RSpec::Core::RakeTask.new(:spec)
 
 task default: :spec
           END
-          block.call(:creating_new_rakefile, rakefile: rf )
+          block.call(:creating_new_rakefile, rakefile: rf ) if block
           File.open(rf,"w") do |f|
             f.write rfCont
           end
         else
           
-          block.call(:adding_to_rakefile, rakefile: rf )
+          block.call(:adding_to_rakefile, rakefile: rf ) if block
          
           cont = File.read(rf)
           FileUtils.mv(rf, "#{rf}.bak")
