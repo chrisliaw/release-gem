@@ -30,32 +30,41 @@ module Release
         end
 
         def release_dependencies(*args, &block)
-          if block
 
-            block.call(:action_start, :relase_dependencies)
-            puts "gem release dependencies" 
-            puts "Project has development gem? : #{gemdepInst.has_development_gem?}"
-            keys = gemdepInst.development_gem.keys
-            loop do
-              begin
-                conf = block.call(:define_gem_prod_config, { gems: keys })
-                if conf.is_a?(Hash)
-                  conf.each do |k,v|
-                    gemdepInst.configure_gem(k,v)
+          if gemdepInst.has_development_gem?
+
+            if block
+
+              block.call(:action_start, :relase_dependencies)
+              keys = gemdepInst.development_gem.keys
+              loop do
+                begin
+                  conf = block.call(:define_gem_prod_config, { gems: keys })
+                  if conf.is_a?(Hash)
+                    conf.each do |k,v|
+                      gemdepInst.configure_gem(k,v)
+                    end
+                    break if gemdepInst.all_dev_gems_has_config? 
+                    keys = gemdepInst.not_configured_gem
+                  else
+                    block.call(:invalid_gem_prod_config, "Expected return from :define_gem_prod_config is a hash of \"gem name\" => { type: [:runtime | :dev], version: \">= 1.2.0\" }. Note version can be empty")
                   end
-                  break if gemdepInst.all_dev_gems_has_config? 
-                  keys = gemdepInst.not_configured_gem
-                else
-                  block.call(:invalid_gem_prod_config, "Expected return from :define_gem_prod_config is a hash of \"gem name\" => { type: [:runtime | :dev], version: \">= 1.2.0\" }. Note version can be empty")
+                rescue GemDepError => ex
+                  block.call(:invlid_gem_prod_config, ex.message)
                 end
-              rescue GemDepError => ex
-                block.call(:invlid_gem_prod_config, ex.message)
               end
+
+              gemdepInst.transfer_gem
+
+              block.call(:development_gem_temporary_promoted)
             end
 
-            gemdepInst.transfer_gem
-          end
+          else
+            if block
+              block.call(:no_development_gems_found)
+            end
 
+          end
 
         end
 

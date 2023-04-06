@@ -79,6 +79,7 @@ module Release
           FileUtils.mv(k,"#{k}.prod")
           FileUtils.cp(v,k)
         end
+        @fileHistory.clear
       end
 
       private

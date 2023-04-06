@@ -31,7 +31,7 @@ module Release
 
               loop do
 
-                sel = @pmt.select("\n The following development gems requires configuration. Please select one to configure") do |m|
+                sel = @pmt.select("\n The following development gems requires configuration. Please select one to configure ".yellow) do |m|
                   selections.each do |g|
                     m.choice g, g
                   end
@@ -39,23 +39,29 @@ module Release
 
                 config[sel] = {} if config[sel].nil?
 
-                type = @pmt.select("\n The gem in production will be runtime or development ? ") do |m|
+                type = @pmt.select("\n The gem in production will be runtime or development ? ".yellow) do |m|
                   m.choice "Runtime", :runtime
                   m.choice "Development only", :dev
                 end
 
                 config[sel][:type] = type
 
-                ver = @pmt.ask("\n Is there specific version pattern (including the ~>/>/>=/= of gemspec) for the gem in production? (Not mandatory) : ")
+                ver = @pmt.ask("\n Is there specific version pattern (including the ~>/>/>=/= of gemspec) for the gem in production? (Not mandatory) : ".yellow)
                 config[sel][:version] = ver if not_empty?(ver)
 
-                @pmt.puts " ** Done configure for gem #{sel}"
+                @pmt.puts " ** Done configure for gem #{sel}".yellow
                 selections.delete_if { |v| v == sel }
                 break if selections.length == 0
 
               end
 
               config
+
+            when :development_gem_temporary_promoted
+              @pmt.puts "\n Development gem(s) temporary promoted to production status".yellow
+
+            when :no_development_gems_found
+              @pmt.puts "\n No development gem(s) in used found".yellow
 
             end
           end

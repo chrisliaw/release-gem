@@ -17,6 +17,9 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
 
       # step 3 : build the gem
       st, ver = build
+
+      dependency_restore
+
       if st
         # step 4, push the gem to rubygems
         push(version: ver)
@@ -24,6 +27,7 @@ Release::Gem.engine(:gem, root: Dir.getwd) do
       end
 
     end # gem_cli_action
+
 
     vcs_cli_action do
       @selVer = value(:selected_version)
