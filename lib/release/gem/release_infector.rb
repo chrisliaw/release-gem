@@ -41,7 +41,7 @@ module Release
         terminal = ""
         Bundler.with_clean_env do
 
-          cmd = "cd #{@root} && rake gem:release" 
+          cmd = "cd #{@root} && bundle update 2>&1 && rake gem:release" 
           if block
             terminal = block.call(:select_terminal, name: @name, options: poss)
             if terminal != :skip
