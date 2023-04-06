@@ -8,3 +8,7 @@ gemspec
 gem "rake", "~> 13.0"
 
 gem "rspec", "~> 3.0"
+
+gem "gvcs", git: "gvcs", branch: "master"
+gem "git_cli", git: "git_cli", branch: "master"
+
