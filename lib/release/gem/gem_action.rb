@@ -68,8 +68,9 @@ module Release
               Gem.logger.debug "GEM transfer!"
 
               Bundler.with_unbundled_env do
+                Gem.logger.debug "Updating bundle!"
                 # since there is a new version after release!
-                `cd #{@root} && bundle update`
+                puts `cd #{@root} && bundle update 2>&1`
               end
 
               block.call(:development_gem_temporary_promoted)
