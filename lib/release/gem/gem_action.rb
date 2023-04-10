@@ -232,16 +232,19 @@ module Release
                   st[Pathname.new(t).relative_path_from(@root)] = t
                 end
                 selGemFile = block.call(:multiple_target_gems_found, st)
-                #res = TTY::Command.new.run!("gem install pkg/#{gemspec.name}-#{gemVer}.gem") do |out, err|
-                res = TTY::Command.new.run!("gem install #{selGemFile}") do |out, err|
-                  cp out if not_empty?(out)
-                  ce err if not_empty?(err)
-                end
-                block.call(:gem_file_installed, Pathname.new(selGemFile).relative_path_from(@root))
               else
                 raise GemActionError, "Multiple target gem found. Please provide a block for gem selection"
               end
+            else
+              selGemFile = target.first
             end
+
+            #res = TTY::Command.new.run!("gem install pkg/#{gemspec.name}-#{gemVer}.gem") do |out, err|
+            res = TTY::Command.new.run!("gem install #{selGemFile}") do |out, err|
+              cp out if not_empty?(out)
+              ce err if not_empty?(err)
+            end
+            block.call(:gem_file_installed, Pathname.new(selGemFile).relative_path_from(@root))
 
           else
             if block
