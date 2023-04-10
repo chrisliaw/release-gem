@@ -221,7 +221,7 @@ module Release
           cp "Given gem version '#{gemVer}' to install"
           target = Dir.glob(File.join(Dir.getwd,"**/*.gem")).select { |sf|
             sf =~ /\w*-#{gemVer}\w*/
-          }.first
+          }
 
           if not_empty?(target)
 
