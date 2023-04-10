@@ -1,10 +1,9 @@
 GIT
   remote: git_cli
-  revision: 22cd18d8894432d531b51823ba85fdc5e4c9c80c
+  revision: c10a4f6b94165f1338f5b558e42fdfb4cfc4a960
   branch: master
   specs:
-    git_cli (0.11.4)
-      gvcs
+    git_cli (0.12.0)
       ptools (~> 1.4.0)
       teLogger
       toolrack
@@ -19,7 +18,7 @@ GIT
 PATH
   remote: .
   specs:
-    release-gem (0.1.19)
+    release-gem (0.1.22)
       colorize
       teLogger
       toolrack
