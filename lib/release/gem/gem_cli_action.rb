@@ -240,7 +240,29 @@ module Release
 
           sysInst = @pmt.yes?(pmsg("\n Install release into system? "))
           if sysInst
-            @inst.install(*args)
+            @inst.install(*args) do |ops, *args|
+              case ops
+              when :multiple_target_gems_found
+                files = args.first
+                res = @pmt.select("\n It seems there are more than 1 gem files with the same version name : ".yellow) do |m|
+                  files.each do |k,v|
+                    m.choice k,v
+                  end
+                  m.choice "Abort", :abort
+                end
+
+                raise Gem::Release::Abort, "Abort by user" if res == :abort
+
+                res
+
+              when :gem_file_installed
+                @pmt.puts "\n Gem file #{args.first} installed successfully ".green
+
+              when :target_gem_not_found
+                @pmt.puts "\n There is no gem file fould that has the version '#{args.first}' in its name. Please try again\n".red
+
+              end
+            end
           end
 
         end # install

@@ -3,7 +3,7 @@
 require 'release/gem'
 
 puts "\n Standard GEM CLI release flow version #{Release::Gem::VERSION}".yellow
-puts "\n Your current location : #{Dir.getwd}\n".yellow
+puts " Current location : #{Dir.getwd}\n".yellow
 
 Release::Gem.engine(:gem, root: Dir.getwd) do
 

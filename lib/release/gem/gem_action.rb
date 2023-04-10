@@ -219,10 +219,42 @@ module Release
           end
 
           cp "Given gem version '#{gemVer}' to install"
-          res = TTY::Command.new.run!("gem install pkg/#{gemspec.name}-#{gemVer}.gem") do |out, err|
-            cp out if not_empty?(out)
-            ce err if not_empty?(err)
+          target = Dir.glob(File.join(Dir.getwd,"**/*.gem")).select { |sf|
+            sf =~ /\w*-#{gemVer}\w*/
+          }.first
+
+          if not_empty?(target)
+
+            if target.length > 1
+              if block
+                st = {}
+                target.each do |t|
+                  st[Pathname.new(t).relative_path_from(@root)] = t
+                end
+                selGemFile = block.call(:multiple_target_gems_found, st)
+                #res = TTY::Command.new.run!("gem install pkg/#{gemspec.name}-#{gemVer}.gem") do |out, err|
+                res = TTY::Command.new.run!("gem install #{selGemFile}") do |out, err|
+                  cp out if not_empty?(out)
+                  ce err if not_empty?(err)
+                end
+                block.call(:gem_file_installed, Pathname.new(selGemFile).relative_path_from(@root))
+              else
+                raise GemActionError, "Multiple target gem found. Please provide a block for gem selection"
+              end
+            end
+
+          else
+            if block
+              block.call(:target_gem_not_found, gemVer)
+            else
+              raise GemActionError, "Target gem carry the version '#{gemVer}' not found"
+            end
           end
+          
+          #res = TTY::Command.new.run!("gem install pkg/#{gemspec.name}-#{gemVer}.gem") do |out, err|
+          #  cp out if not_empty?(out)
+          #  ce err if not_empty?(err)
+          #end
 
         end # install
 
